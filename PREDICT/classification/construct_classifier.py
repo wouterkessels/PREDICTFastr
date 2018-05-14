@@ -20,7 +20,9 @@ from sklearn.svm import SVR as SVMR
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.linear_model import SGDClassifier, ElasticNet, SGDRegressor
 from sklearn.linear_model import Lasso
+from sklearn.linear_model import LogisticRegression
 import scipy
+import numpy as np
 
 
 def construct_classifier(config):
@@ -45,6 +47,10 @@ def construct_classifier(config):
     elif config['Classification']['classifier'] == 'SVR':
         # Support Vector Regression
         classifier, param_grid = construct_SVM(config, True)
+
+    elif config['Classification']['classifier'] == 'LR':
+        #Logistic Regression
+        classifier = LogisticRegression(max_iter=100000)
 
     elif config['Classification']['classifier'] == 'RF':
         # Random forest kernel
@@ -111,12 +117,12 @@ def construct_SVM(config, regression=False):
         clf = SVMR(max_iter=100000)
 
     if config['Classification']['Kernel'] == "polynomial":
-        param_grid = {'kernel': ['poly'], 'C': scipy.stats.uniform(loc=0.5e8, scale=0.5e8), 'degree': scipy.stats.uniform(loc=3, scale=2), 'coef0': scipy.stats.uniform(loc=0.5, scale=0.5)}
+        param_grid = {'kernel': ['poly'], 'C': scipy.stats.uniform(loc=0, scale=np.sqrt(415)), 'degree': scipy.stats.uniform(loc=2, scale=3), 'coef0': scipy.stats.uniform(loc=0, scale=1)}
 
     elif config['Classification']['Kernel'] == "linear":
-        param_grid = {'kernel': ['linear'], 'C': scipy.stats.uniform(loc=0.5e8, scale=0.5e8), 'coef0': scipy.stats.uniform(loc=0.5, scale=0.5)}
+        param_grid = {'kernel': ['linear'], 'C': scipy.stats.uniform(loc=0, scale=np.sqrt(415)), 'coef0': scipy.stats.uniform(loc=0, scale=1)}
 
     elif config['Classification']['Kernel'] == "rbf":
-        param_grid = {'kernel': ['rbf'], 'gamma':  scipy.stats.uniform(loc=0.5e-3, scale=0.5e-3), 'nu': scipy.stats.uniform(loc=0.5, scale=0.5)}
+        param_grid = {'kernel': ['rbf'], 'C': scipy.stats.uniform(loc=0, scale=np.sqrt(415)), 'gamma':  scipy.stats.uniform(loc=0, scale=1e-3)}
 
     return clf, param_grid
