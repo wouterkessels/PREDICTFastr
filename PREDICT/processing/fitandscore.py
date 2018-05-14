@@ -24,6 +24,7 @@ import numpy as np
 from sklearn.linear_model import Lasso
 from sklearn.feature_selection import SelectFromModel
 import scipy
+from sklearn.decomposition import PCA
 
 
 def fit_and_score(estimator, X, y, scorer,
@@ -95,8 +96,13 @@ def fit_and_score(estimator, X, y, scorer,
             always printed.
 
     '''
+    pca = None
     # We copy the parameter object so we can alter it and keep the original
     para_estimator = para.copy()
+    for i in range(len(X)):
+        if len(X[i][0]) != len(X[i][0]):
+            raise IOError('Length of features values ({}) does not match length of feature labels ({})\n \
+                           Check CalcFeatures'.format(len(X[i][0]), len(X[0][1])))
 
     # X is a tuple: split in two arrays
     feature_values = np.asarray([x[0] for x in X])
@@ -123,7 +129,6 @@ def fit_and_score(estimator, X, y, scorer,
                 del para_estimator[group]
 
             parameters_featsel[group] = value
-
         GroupSel = SelectGroups(parameters=parameters_featsel)
         GroupSel.fit(feature_labels[0])
         if verbose:
@@ -135,32 +140,6 @@ def fit_and_score(estimator, X, y, scorer,
     else:
         GroupSel = None
 
-    # Perform feature selection using a model
-    para_estimator['SelectFromModel'] = False
-    if para_estimator['SelectFromModel']:
-        if verbose:
-            print("Selecting features using lasso model.")
-        # Use lasso model for feature selection
-
-        # First, draw a random value for alpha and the penalty ratio
-        alpha = scipy.stats.uniform(loc=1.0, scale=0.5).rvs()
-        # l1_ratio = scipy.stats.uniform(loc=0.5, scale=0.4).rvs()
-
-        # Create and fit lasso model
-        lassomodel = Lasso(alpha=alpha)
-        lassomodel.fit(feature_values, y)
-
-        # Use fit to select optimal features
-        SelectModel = SelectFromModel(lassomodel, prefit=True)
-        if verbose:
-            print("Original Length: " + str(len(feature_values[0])))
-        feature_values = SelectModel.transform(feature_values)
-        if verbose:
-            print("New Length: " + str(len(feature_values[0])))
-        feature_labels = SelectModel.transform(feature_labels)
-    else:
-        SelectModel = None
-    del para_estimator['SelectFromModel']
 
     if len(feature_values[0]) == 0:
         # TODO: Make a specific PREDICT exception for this warning.
@@ -170,6 +149,7 @@ def fit_and_score(estimator, X, y, scorer,
         # Return a zero performance dummy
         VarSel = None
         scaler = None
+        SelectModel = None
 
         # Delete the non-used fields
         if 'Featsel_Variance' in para_estimator.keys():
@@ -210,7 +190,10 @@ def fit_and_score(estimator, X, y, scorer,
 
             # Return a zero performance dummy
             scaler = None
+            SelectModel = None
+
             ret = [0, 0, 0, 0, 0, para_estimator, para]
+            del para_estimator['FeatureScaling']
         else:
             if 'FeatureScaling' in para_estimator:
                 if verbose:
@@ -224,13 +207,53 @@ def fit_and_score(estimator, X, y, scorer,
 
                 if scaler is not None:
                     feature_values = scaler.transform(feature_values)
-                del para_estimator['FeatureScaling']
             else:
                 scaler = None
+            del para_estimator['FeatureScaling']
 
             # Only when using fastr this is an entry
             if 'Number' in para_estimator.keys():
                 del para_estimator['Number']
+
+
+            # Perform feature selection using a model
+            para_estimator['SelectFromModel'] = False
+            if para_estimator['SelectFromModel']:
+                if verbose:
+                    print("Selecting features using lasso model.")
+                # Use lasso model for feature selection
+
+                # First, draw a random value for alpha and the penalty ratio
+                alpha = scipy.stats.uniform(loc=0.5, scale=1.5).rvs()
+                # l1_ratio = scipy.stats.uniform(loc=0.5, scale=0.4).rvs()
+
+                # Create and fit lasso model
+                lassomodel = Lasso(alpha=alpha)
+                lassomodel.fit(feature_values, y)
+
+                # Use fit to select optimal features
+                SelectModel = SelectFromModel(lassomodel, prefit=True)
+                if verbose:
+                    print("Original Length: " + str(len(feature_values[0])))
+                feature_values = SelectModel.transform(feature_values)
+                if verbose:
+                    print("New Length: " + str(len(feature_values[0])))
+                feature_labels = SelectModel.transform(feature_labels)
+            else:
+                SelectModel = None
+            del para_estimator['SelectFromModel']
+
+
+            #Principle Component Analysis
+            do_PCA = False
+            n_components = 39
+            if len(feature_values[0]) < n_components:
+                n_components = len(feature_values[0])
+            if do_PCA:
+                pca = PCA(n_components=n_components)
+                pca.fit(feature_values)
+                feature_values = pca.transform(feature_values)
+                print('Fitting PCA')
 
             ret = _fit_and_score(estimator, feature_values, y,
                                  scorer, train,
@@ -244,3 +267,4 @@ def fit_and_score(estimator, X, y, scorer,
             ret.append(para)
 
     return ret, GroupSel, VarSel, SelectModel, feature_labels[0], scaler
+    #return ret, GroupSel, VarSel, SelectModel, feature_labels[0], scaler, pca
