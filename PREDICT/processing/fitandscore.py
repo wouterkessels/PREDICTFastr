@@ -96,7 +96,9 @@ def fit_and_score(estimator, X, y, scorer,
             always printed.
 
     '''
+
     pca = None
+    
     # We copy the parameter object so we can alter it and keep the original
     para_estimator = para.copy()
     for i in range(len(X)):
