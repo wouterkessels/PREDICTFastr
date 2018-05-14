@@ -68,11 +68,16 @@ def main():
                              return_times=data['return_times'],
                              error_score=data['error_score'])
       for parameters in para.values())
-
     (ret, GroupSel, VarSel, SelectModel, feature_labels, scaler) = zip(*out)
+    #(ret, GroupSel, VarSel, SelectModel, feature_labels, scaler, pca) = zip(*out)
 
     source_labels = ['RET', 'feature_labels', 'scaler', 'VarSelection', 'GroupSelection', 'SelectModel']
+    #source_labels = ['RET', 'feature_labels', 'scaler', 'VarSelection', 'GroupSelection', 'SelectModel', 'PCA']
 
+    # source_data =\
+    #     pd.Series([ret, feature_labels, scaler, VarSel, GroupSel, SelectModel, pca],
+    #               index=source_labels,
+    #               name='Fit and Score Output')
     source_data =\
         pd.Series([ret, feature_labels, scaler, VarSel, GroupSel, SelectModel],
                   index=source_labels,
