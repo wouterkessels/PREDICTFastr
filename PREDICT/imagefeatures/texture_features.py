@@ -387,7 +387,6 @@ def get_GLSZM_features(image, mask):
     for l in GLSZM_labels_temp:
         l = l.replace('original_glszm', 'tf_GLSZM')
         GLSZM_labels.append(l)
-
     return GLSZM_features, GLSZM_labels
 
 
@@ -459,6 +458,12 @@ def get_NGTDM_features(image, mask):
         l = l.replace('original_ngtdm', 'tf_NGTDM')
         NGTDM_labels.append(l)
 
+    #Replace every NaN by zero
+    for i in range(len(NGTDM_features)):
+        if np.isnan(NGTDM_features[i]):
+            NGTDM_features[i] = 0
+            print("NaN found, replaced with zero.")
+    
     return NGTDM_features, NGTDM_labels
 
 
