@@ -187,9 +187,17 @@ def crossval(config, label_data, image_features,
                     if num == 0:
                         X_train_temp = np.zeros((len(x[0]), 1))
                         X_train_temp[:, 0] = np.asarray(x[0])
+                        #Patient 69 has different dimensions for some reason,
+                        #set them manually to the array length of the others
+                        standard_length = len(x[0])
                     else:
-                        xt = np.zeros((len(x[0]), 1))
-                        xt[:, 0] = np.asarray(x[0])
+                        if len(x[0]) == standard_length:
+                            xt = np.zeros((len(x[0]), 1))
+                            xt[:, 0] = np.asarray(x[0])
+                        else:
+                            xt = np.zeros((standard_length, 1))
+                            xt[:, 0] = np.asarray(standard_length)
+
                         X_train_temp = np.column_stack((X_train_temp, xt))
 
                 X_train_temp = np.transpose(X_train_temp)
