@@ -12,6 +12,8 @@ from sklearn.utils.fixes import MaskedArray
 from sklearn.model_selection._search import _CVScoreTuple, ParameterSampler
 from sklearn.model_selection._search import ParameterGrid, _check_param_grid
 
+from PREDICT.featureselection.varselection import varselection
+
 from abc import ABCMeta, abstractmethod
 from collections import Sized, defaultdict
 import numpy as np
@@ -246,7 +248,6 @@ class BaseSearchCV(six.with_metaclass(ABCMeta, BaseEstimator,
                     X_notnan[pnum] = features_notnan
 
         X = X_notnan
-
         if self.best_groupsel is not None:
             X = self.best_groupsel.transform(X)
         if self.best_modelsel is not None:
@@ -255,6 +256,8 @@ class BaseSearchCV(six.with_metaclass(ABCMeta, BaseEstimator,
             X = self.best_varsel.transform(X)
         if self.best_scaler is not None:
             X = self.best_scaler.transform(X)
+        # if self.best_pca is not None:
+        #     X = self.best_pca.transform(X)
 
         return X
 
@@ -337,7 +340,7 @@ class BaseSearchCVfastr(BaseSearchCV):
         parameters_temp = dict()
         for num, parameters in enumerate(parameter_iterable):
 
-            parameters["Number"] = str(num)
+            #parameters["Number"] = str(num)
             parameters_temp[str(num)] = parameters
 
         # Split the parameters files in equal parts
@@ -361,6 +364,8 @@ class BaseSearchCVfastr(BaseSearchCV):
                                                  name,
                                                  'parameters',
                                                  fname)
+        if "Number" in parameters:
+            del parameters["Number"]
 
         # Create test-train splits
         traintest_files = dict()
@@ -433,6 +438,7 @@ class BaseSearchCVfastr(BaseSearchCV):
 
         # Read in the output data once finished
         # TODO: expanding fastr url is probably a nicer way
+        # sink_files = glob.glob(os.path.join(fastr.config.mounts['tmp'], 'GS', name) + '/output*.hdf5')
         sink_files = glob.glob(os.path.join(fastr.config.mounts['tmp'], 'GS', name) + '/output*.hdf5')
         save_data = list()
         feature_labels = list()
@@ -440,6 +446,7 @@ class BaseSearchCVfastr(BaseSearchCV):
         GroupSel = list()
         VarSel = list()
         SelectModel = list()
+        # PCAs = list()
         for output in sink_files:
             data = pd.read_hdf(output)
             save_data.extend(list(data['RET']))
@@ -448,6 +455,7 @@ class BaseSearchCVfastr(BaseSearchCV):
             GroupSel.extend(list(data['GroupSelection']))
             VarSel.extend(list(data['VarSelection']))
             SelectModel.extend(list(data['SelectModel']))
+            # PCAs.extend(list(data['PCA']))
 
         # Remove the temporary folder used
         shutil.rmtree(tempfolder)
@@ -462,6 +470,9 @@ class BaseSearchCVfastr(BaseSearchCV):
              fit_time, score_time, parameters_est, parameters_all) =\
               zip(*save_data)
 
+        print parameters_est[0]
+        # raise IOError
+
         # We take only one result per split, default by sklearn
         candidate_params_est = list(parameters_est[::n_splits])
         candidate_params_all = list(parameters_all[::n_splits])
@@ -469,6 +480,7 @@ class BaseSearchCVfastr(BaseSearchCV):
         SelectModel = list(SelectModel[::n_splits])
         VarSel = list(VarSel[::n_splits])
         scalers = list(scalers[::n_splits])
+        # PCAs = list(PCAs[::n_splits])
         feature_labels = list(feature_labels[::n_splits])
         n_candidates = len(candidate_params_est)
 
@@ -524,6 +536,7 @@ class BaseSearchCVfastr(BaseSearchCV):
         SelectModel = np.asarray(SelectModel)[bestindices].tolist()
         VarSel = np.asarray(VarSel)[bestindices].tolist()
         scalers = np.asarray(scalers)[bestindices].tolist()
+        # PCAs = np.asarray(PCAs)[bestindices].tolist()
 
         # Feature labels cannot be indiced, as it is a list of sequences and
         # cannot be converted to a numpy aray
@@ -544,6 +557,7 @@ class BaseSearchCVfastr(BaseSearchCV):
         best_varsel = VarSel[best_index]
         best_scaler = scalers[best_index]
         best_featlab = feature_labels[best_index]
+        # best_pca = PCAs[best_index]
 
         # Use one MaskedArray and mask all the places where the param is not
         # applicable for that candidate. Use defaultdict as each candidate may
@@ -571,10 +585,12 @@ class BaseSearchCVfastr(BaseSearchCV):
         self.best_index_ = best_index
         self.best_featlab = best_featlab
         self.n_splits_ = n_splits
+        # self.best_pca = best_pca
 
         if self.refit:
             # fit the best estimator using the entire dataset
             # clone first to work around broken estimators
+            print best_parameters_est
             best_estimator = clone(base_estimator).set_params(
                 **best_parameters_est)
 
