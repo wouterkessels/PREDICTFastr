@@ -16,6 +16,8 @@
 # limitations under the License.
 
 from sklearn.feature_selection import VarianceThreshold
+from PREDICT.featureselection.varselection import varselection
+import numpy as np
 
 
 def selfeat_variance(image_features, labels=None, thresh=0.99):
@@ -48,10 +50,16 @@ def selfeat_variance(image_features, labels=None, thresh=0.99):
 
     sel: VarianceThreshold object
             The fitted variance threshold object.
-            
+
     '''
-    sel = VarianceThreshold(threshold=thresh*(1 - thresh))
+    #Threshold dependent of mean of feature
+    sel = varselection(threshold=thresh*(1 - thresh))
+
+    #Threshold independent of mean
+    #sel = VarianceThreshold(threshold=thresh*(1 - thresh))
+
     sel = sel.fit(image_features)
+    print(sel)
     image_features = sel.transform(image_features)
     if labels is not None:
         labels = sel.transform(labels).tolist()[0]
